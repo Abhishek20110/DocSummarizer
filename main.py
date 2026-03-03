@@ -2,8 +2,10 @@ from fastapi import FastAPI, Request, Form, BackgroundTasks, Query
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 import os
 import shutil
+import logging
 from dotenv import load_dotenv
 
 from services.auth import get_drive_service
@@ -11,11 +13,26 @@ from services.drive_service import list_files_in_folder, download_file, get_fold
 from services.extractor import extract_content
 from services.summarizer import summarize_text
 from services.report_gen import generate_csv_report, generate_pdf_report
-from services.database import save_folder_results, get_folder_results, list_processed_folders, delete_folder
+from services.database import save_folder_results, get_folder_results, list_processed_folders, delete_folder, client as mongo_client
 
 load_dotenv()
 
-app = FastAPI(title="DocSummarizer")
+logger = logging.getLogger("uvicorn.error")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: verify MongoDB connection
+    try:
+        await mongo_client.server_info()
+        logger.info("✅ MongoDB connected successfully.")
+    except Exception as e:
+        logger.error(f"❌ MongoDB connection failed: {e}")
+    yield
+    # Shutdown: close MongoDB connection gracefully
+    mongo_client.close()
+    logger.info("🔌 MongoDB connection closed.")
+
+app = FastAPI(title="DocSummarizer", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -106,9 +123,19 @@ async def process_folder(background_tasks: BackgroundTasks, folder_id: str = For
 
 @app.get("/status")
 async def get_status():
+    # Check MongoDB connection
+    try:
+        await mongo_client.server_info()
+        mongo_status = "connected"
+    except Exception as e:
+        mongo_status = f"disconnected ({str(e)})"
+
     return {
         "process_status": process_status,
-        "results": process_results
+        "results": process_results,
+        "mongodb": {
+            "status": mongo_status
+        }
     }
 
 @app.get("/api/folders")
