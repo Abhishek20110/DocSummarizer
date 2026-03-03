@@ -18,7 +18,7 @@ OUTPUT FORMAT (STRICTLY ENFORCED)
 You MUST produce output using EXACTLY the following Markdown structure:
 
 ### Overview
-Write exactly 2–3 sentences that:
+Write exactly 5-10 sentences that:
 - Clearly state the document’s primary objective
 - Summarize its core argument or function
 - Indicate its scope, impact, or significance
@@ -65,7 +65,7 @@ FINAL SELF-CHECK
 
 Verify before output:
 
-- Overview is exactly 2–3 sentences
+- Overview is exactly 5-10 sentences
 - Bullet count is 5–8
 - No redundant bullets
 - Logical flow across bullets
