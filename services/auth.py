@@ -1,35 +1,73 @@
-import os.path
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+import os
+import json
+from functools import lru_cache
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
+
+def _load_credentials():
+    """
+    Loads Google service account credentials.
+    Priority:
+    1. credentials.json file (local development)
+    2. GOOGLE_CREDENTIALS environment variable (production)
+    """
+
+    # 1️⃣ Local development support
+    if os.path.exists("credentials.json"):
+        return service_account.Credentials.from_service_account_file(
+            "credentials.json",
+            scopes=SCOPES,
+        )
+
+    # 2️⃣ Production (Environment variable)
+    creds_json = os.getenv("GOOGLE_CREDENTIALS")
+    if not creds_json:
+        raise RuntimeError(
+            "GOOGLE_CREDENTIALS environment variable not set "
+            "and credentials.json not found."
+        )
+
+    try:
+        creds_dict = json.loads(creds_json)
+    except json.JSONDecodeError:
+        raise RuntimeError("GOOGLE_CREDENTIALS contains invalid JSON.")
+
+    # Validate correct credential type
+    if creds_dict.get("type") != "service_account":
+        raise RuntimeError(
+            "Invalid credentials type. Expected 'service_account' JSON."
+        )
+
+    return service_account.Credentials.from_service_account_info(
+        creds_dict,
+        scopes=SCOPES,
+    )
+
+
+@lru_cache()
 def get_drive_service():
-    """Gets the Google Drive service object."""
-    creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            # Note: This requires credentials.json to be in the project root.
-            if os.path.exists('credentials.json'):
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', SCOPES)
-                creds = flow.run_local_server(port=0)
-                # Save the credentials for the next run
-                with open('token.json', 'w') as token:
-                    token.write(creds.to_json())
-            else:
-                raise FileNotFoundError("credentials.json not found. Please follow the setup instructions in README.")
+    """
+    Returns a cached, authenticated Google Drive service client.
+    Cached for efficiency in serverless environments.
+    """
+    try:
+        credentials = _load_credentials()
 
-    return build('drive', 'v3', credentials=creds)
+        service = build(
+            "drive",
+            "v3",
+            credentials=credentials,
+            cache_discovery=False,  # Important for serverless
+        )
+
+        return service
+
+    except HttpError as error:
+        raise RuntimeError(f"Google Drive API error: {error}")
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize Drive service: {str(e)}")
