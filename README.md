@@ -39,8 +39,6 @@ pip install -r requirements.txt
 Create a `.env` file in the project root (see `.env.example`):
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-GOOGLE_CLIENT_ID=your_google_client_id_here
-GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 MONGO_URI=mongodb://localhost:27017/doc_summarizer
 ```
 
