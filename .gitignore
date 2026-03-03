@@ -11,6 +11,7 @@ env/
 
 # Environment Variables and Credentials
 .env
+oldcredentials.json
 credentials.json
 token.json
 

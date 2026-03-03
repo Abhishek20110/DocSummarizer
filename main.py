@@ -9,8 +9,8 @@ import logging
 from dotenv import load_dotenv
 
 from services.auth import get_drive_service
-from services.drive_service import list_files_in_folder, download_file, get_folder_name
-from services.extractor import extract_content
+from services.drive_service import list_files_in_folder, download_file_to_memory, get_folder_name
+from services.extractor import extract_content , extract_content_from_stream
 from services.summarizer import summarize_text
 from services.report_gen import generate_csv_report, generate_pdf_report
 from services.database import save_folder_results, get_folder_results, list_processed_folders, delete_folder, client as mongo_client
@@ -58,61 +58,99 @@ async def read_root(request: Request):
 
 async def background_summarize(folder_id: str):
     global process_results, process_status
-    process_status["status"] = "processing"
-    process_status["processed_count"] = 0
+
+    process_status.update({
+        "status": "processing",
+        "processed_count": 0,
+        "total_files": 0,
+        "current_file": "",
+        "message": ""
+    })
+
     process_results = []
-    
+
     try:
         service = get_drive_service()
         files = list_files_in_folder(service, folder_id)
+
         process_status["total_files"] = len(files)
-        
+
         if not files:
-            process_status["status"] = "completed"
-            process_status["message"] = "No files found in the folder."
+            process_status.update({
+                "status": "completed",
+                "message": "No supported files found in the folder."
+            })
             return
 
         for file in files:
-            file_id = file['id']
-            file_name = file['name']
+            file_id = file["id"]
+            file_name = file["name"]
+            mime_type = file["mimeType"]
+
             process_status["current_file"] = file_name
-            
-            # Download
-            temp_path = download_file(service, file_id, file_name)
-            
-            # Extract
-            content = extract_content(temp_path)
-            
-            # Summarize (with evaluation)
-            sh_result = await summarize_text(content)
-            
-            summary = sh_result.get("summary", "Error generating summary.")
-            evaluation = sh_result.get("evaluation")
-            
-            process_results.append({
-                "filename": file_name,
-                "summary": summary,
-                "evaluation": evaluation
-            })
-            
-            # Clean up temp file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            
+
+            try:
+                # 🔹 Download to memory (auto-skips >10MB)
+                file_stream = download_file_to_memory(service, file)
+
+                if file_stream is None:
+                    # Skipped due to size or error
+                    process_results.append({
+                        "filename": file_name,
+                        "summary": "Skipped (file too large or download failed).",
+                        "evaluation": None
+                    })
+                    process_status["processed_count"] += 1
+                    continue
+
+                # 🔹 Extract content (in-memory)
+                content = extract_content_from_stream(file_stream, mime_type)
+
+                if not content.strip():
+                    process_results.append({
+                        "filename": file_name,
+                        "summary": "No readable content found.",
+                        "evaluation": None
+                    })
+                    process_status["processed_count"] += 1
+                    continue
+
+                # 🔹 Summarize
+                sh_result = await summarize_text(content)
+
+                summary = sh_result.get("summary", "Error generating summary.")
+                evaluation = sh_result.get("evaluation")
+
+                process_results.append({
+                    "filename": file_name,
+                    "summary": summary,
+                    "evaluation": evaluation
+                })
+
+            except Exception as file_error:
+                process_results.append({
+                    "filename": file_name,
+                    "summary": f"Processing failed: {str(file_error)}",
+                    "evaluation": None
+                })
+
             process_status["processed_count"] += 1
-            
-        process_status["status"] = "completed"
-        process_status["message"] = f"Successfully summarized {len(files)} documents."
-        process_status["current_file"] = ""
-        
-        # Persist results
+
+        process_status.update({
+            "status": "completed",
+            "message": f"Successfully processed {process_status['processed_count']} documents.",
+            "current_file": ""
+        })
+
+        # 🔹 Persist results
         folder_name = get_folder_name(service, folder_id)
         await save_folder_results(folder_id, folder_name, process_results)
-        
-    except Exception as e:
-        process_status["status"] = "error"
-        process_status["message"] = str(e)
 
+    except Exception as e:
+        process_status.update({
+            "status": "error",
+            "message": str(e)
+        })
 @app.post("/summarize")
 async def process_folder(background_tasks: BackgroundTasks, folder_id: str = Form(...)):
     if process_status["status"] == "processing":

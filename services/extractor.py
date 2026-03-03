@@ -73,3 +73,25 @@ def extract_content(file_path):
         return extract_text_from_txt(file_path)
     else:
         return "Unsupported file format."
+
+def extract_content_from_stream(file_stream, mime_type):
+    file_stream.seek(0)
+
+    if mime_type == "application/pdf":
+        import fitz
+        text = ""
+        with fitz.open(stream=file_stream.read(), filetype="pdf") as doc:
+            for page in doc:
+                text += page.get_text()
+        return text
+
+    elif mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        import docx
+        document = docx.Document(file_stream)
+        return "\n".join([para.text for para in document.paragraphs])
+
+    elif mime_type == "text/plain":
+        return file_stream.read().decode("utf-8", errors="ignore")
+
+    else:
+        raise ValueError("Unsupported file type")
