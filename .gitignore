@@ -19,6 +19,7 @@ token.json
 exports/
 temp/
 samples/
+mylocalfiles/
 
 # IDE/System Files
 .vscode/

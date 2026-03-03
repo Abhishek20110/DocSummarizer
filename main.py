@@ -8,7 +8,9 @@ import shutil
 import logging
 from dotenv import load_dotenv
 
-from services.auth import get_drive_service
+#if using oauth, import from authwithOAuth  instead of auth
+#from services.authwithOAuth import get_drive_service 
+from services.auth import get_drive_service # Updated to use the new auth module
 from services.drive_service import list_files_in_folder, download_file_to_memory, get_folder_name
 from services.extractor import extract_content , extract_content_from_stream
 from services.summarizer import summarize_text
