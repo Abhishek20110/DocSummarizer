@@ -1,287 +1,779 @@
+/* ===========================================================
+   HOLI SPLASH — Festival of Colors (Authentic)
+   Concept: LIGHT background (like white clothes at Holi)
+   with vivid pigment color stains.
+   =========================================================== */
+
 :root {
-    --primary: #6366f1;
-    --primary-hover: #4f46e5;
-    --bg-dark: #0f172a;
-    --card-bg: #1e293b;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent: #10b981;
-    --danger: #ef4444;
+    /* Real gulal / Holi powder pigment colors */
+    --pink: #e91e8c;
+    /* Gulal pink */
+    --orange: #f56500;
+    /* Sindoor orange */
+    --yellow: #e8a800;
+    /* Turmeric / haldi */
+    --green: #15a832;
+    /* Leaf / Pista */
+    --cyan: #0099cc;
+    /* Sky blue */
+    --purple: #7b2cbf;
+    /* Deep violet */
+    --red: #d62828;
+    /* Kumkum red */
+
+    /* App surfaces */
+    --bg: #fdf8ef;
+    /* Warm parchment — like white fabric at Holi */
+    --surface: rgba(255, 255, 255, 0.72);
+    --card: #ffffff;
+    --border: rgba(0, 0, 0, 0.07);
+    --text: #1a1222;
+    /* Dark ink */
+    --muted: #6b5e7a;
+    --danger: var(--red);
 }
 
+/* ─── Body: Holi Powder Stains on White Fabric ─── */
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: var(--bg-dark);
-    color: var(--text-main);
     margin: 0;
-    padding: 0;
+    min-height: 100vh;
+    background-color: var(--bg);
+
+    /* Bold Holi powder stains — much more visible */
+    background-image:
+        radial-gradient(ellipse 42% 32% at 4% 8%, rgba(233, 30, 140, 0.45) 0%, rgba(233, 30, 140, 0.12) 45%, transparent 70%),
+        radial-gradient(ellipse 35% 28% at 96% 5%, rgba(0, 153, 204, 0.42) 0%, rgba(0, 153, 204, 0.10) 45%, transparent 70%),
+        radial-gradient(ellipse 46% 36% at 82% 92%, rgba(21, 168, 50, 0.40) 0%, rgba(21, 168, 50, 0.10) 45%, transparent 70%),
+        radial-gradient(ellipse 40% 32% at 12% 95%, rgba(232, 168, 0, 0.42) 0%, rgba(232, 168, 0, 0.10) 45%, transparent 70%),
+        radial-gradient(ellipse 28% 22% at 50% 50%, rgba(123, 44, 191, 0.18) 0%, transparent 65%),
+        radial-gradient(ellipse 25% 20% at 68% 25%, rgba(245, 101, 0, 0.32) 0%, transparent 65%),
+        radial-gradient(ellipse 22% 18% at 28% 45%, rgba(214, 40, 40, 0.20) 0%, transparent 60%);
+
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
     display: flex;
     justify-content: center;
-    min-height: 100vh;
 }
 
+/* Extra decorative fixed splash blobs for full-page Holi effect */
 .container {
-    max-width: 1200px;
-    width: 95%;
-    margin-top: 50px;
-    padding-bottom: 50px;
+    max-width: 1440px;
+    width: 96%;
+    margin-top: 36px;
+    padding-bottom: 80px;
+    position: relative;
 }
 
+.container::before,
+.container::after {
+    content: '';
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Pink + orange blob — top-left */
+.container::before {
+    width: 320px;
+    height: 220px;
+    top: 40px;
+    left: 0;
+    background: radial-gradient(ellipse, rgba(233, 30, 140, 0.5) 0%, rgba(245, 101, 0, 0.28) 45%, transparent 75%);
+    border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%;
+    filter: blur(1px);
+}
+
+/* Green + cyan blob — bottom-right */
+.container::after {
+    width: 300px;
+    height: 220px;
+    bottom: 60px;
+    right: 0;
+    background: radial-gradient(ellipse, rgba(21, 168, 50, 0.48) 0%, rgba(0, 153, 204, 0.28) 50%, transparent 78%);
+    border-radius: 40% 60% 30% 70% / 60% 40% 50% 50%;
+    filter: blur(1px);
+}
+
+/* Ensure content sits above the pseudo blobs */
+.card,
+.header-nav,
+.main-layout {
+    position: relative;
+    z-index: 1;
+}
+
+/* ─── Header ─── */
 header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 44px;
 }
 
+/* Each letter of the title gets a Holi color via spans.
+   We use a single CSS gradient to simulate that effect. */
 h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    background: linear-gradient(to right, #818cf8, #c084fc);
+    font-size: 4.5rem;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    margin: 0 0 12px;
+    line-height: 1;
+    /* Simulate multi-letter painting with wide gradient */
+    background: linear-gradient(90deg,
+            var(--pink) 0%, var(--pink) 14%,
+            var(--orange) 14%, var(--orange)28%,
+            var(--yellow) 28%, var(--yellow)42%,
+            var(--green) 42%, var(--green) 57%,
+            var(--cyan) 57%, var(--cyan) 72%,
+            var(--purple) 72%, var(--purple)86%,
+            var(--red) 86%, var(--red) 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 10px;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.08));
 }
 
 p.subtitle {
-    color: var(--text-muted);
+    color: var(--muted);
+    font-size: 1.1rem;
+    font-weight: 500;
 }
 
+/* ─── Card (white, soft shadow) ─── */
 .card {
-    background-color: var(--card-bg);
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-    margin-bottom: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--card);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 28px;
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        0 8px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
 }
 
+/* Rainbow top stripe — like paint smear on the card */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg,
+            var(--pink), var(--orange), var(--yellow),
+            var(--green), var(--cyan), var(--purple));
+}
+
+/* ─── Form ─── */
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 22px;
 }
 
 label {
     display: block;
-    margin-bottom: 8px;
-    color: var(--text-muted);
-    font-size: 0.9rem;
+    margin-bottom: 9px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
 }
 
 input[type="text"] {
     width: 100%;
-    padding: 12px 16px;
-    background-color: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    color: white;
+    padding: 15px 18px;
+    background: #fafafa;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    color: var(--text);
     font-size: 1rem;
-    transition: border-color 0.2s;
     box-sizing: border-box;
+    transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+input[type="text"]::placeholder {
+    color: #b0a0b8;
 }
 
 input[type="text"]:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--pink);
+    box-shadow: 0 0 0 4px rgba(233, 30, 140, 0.12);
 }
 
+/* ─── Primary CTA Button — Holi Gulal ─── */
 button {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.1s, background-color 0.2s;
     width: 100%;
-    font-size: 1rem;
+    padding: 17px 32px;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    background: var(--pink);
+    box-shadow: 0 4px 0 rgba(180, 0, 100, 0.4), 0 8px 16px rgba(233, 30, 140, 0.3);
+    transition: all 0.2s ease;
+}
+
+button::after {
+    /* Colour splash overlay — hover reveals more colors */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+            var(--pink) 0%, var(--orange) 40%, var(--yellow) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 button:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-1px);
+    transform: translateY(-3px);
+    box-shadow: 0 7px 0 rgba(180, 0, 100, 0.35), 0 14px 24px rgba(233, 30, 140, 0.35);
+}
+
+button:hover::after {
+    opacity: 1;
 }
 
 button:active {
-    transform: translateY(0);
+    transform: translateY(1px);
+    box-shadow: 0 2px 0 rgba(180, 0, 100, 0.4);
 }
 
-.results-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.results-table th {
-    text-align: left;
-    padding: 16px;
-    border-bottom: 2px solid #334155;
-    color: var(--text-muted);
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.results-table td {
-    padding: 20px 16px;
-    border-bottom: 1px solid #334155;
-    vertical-align: top;
-}
-
-.filename {
-    font-weight: 600;
-    color: #e2e8f0;
-}
-
-.summary-text {
-    line-height: 1.6;
-    color: #cbd5e1;
-    font-size: 0.95rem;
-}
-
-.actions {
-    display: flex;
-    gap: 15px;
-    margin-top: 20px;
-}
-
+/* ─── Outline Buttons (CSV/PDF/Resummarize) ─── */
 .btn-outline {
-    background-color: transparent;
-    border: 1px solid var(--primary);
-    color: var(--primary);
+    background: transparent;
+    border: 2px solid rgba(0, 0, 0, 0.12);
+    color: var(--text);
+    box-shadow: none;
+    font-size: 0.85rem;
+    padding: 10px 18px;
+}
+
+.btn-outline::after {
+    display: none;
 }
 
 .btn-outline:hover {
-    background-color: rgba(99, 102, 241, 0.1);
+    border-color: var(--pink);
+    color: var(--pink);
+    background: rgba(233, 30, 140, 0.07);
+    transform: translateY(-1px);
+    box-shadow: none;
+    filter: none;
 }
 
+/* ─── Alerts ─── */
 .alert {
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 22px;
     font-size: 0.95rem;
 }
 
 .alert-error {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: var(--danger);
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: rgba(214, 40, 40, 0.08);
+    border: 1px solid rgba(214, 40, 40, 0.25);
+    color: var(--red);
 }
 
 .alert-success {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: var(--accent);
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    background: rgba(21, 168, 50, 0.08);
+    border: 1px solid rgba(21, 168, 50, 0.25);
+    color: var(--green);
 }
 
-.loader {
-    display: none;
-    text-align: center;
-    margin-top: 20px;
+/* ─── Progress ─── */
+.progress-bg {
+    width: 100%;
+    height: 10px !important;
+    background: rgba(0, 0, 0, 0.07) !important;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
-.loading .loader {
-    display: block;
+#progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg,
+            var(--pink), var(--orange), var(--yellow),
+            var(--green), var(--cyan)) !important;
+    transition: width 0.4s ease;
 }
 
-.loading .btn-process {
-    opacity: 0.7;
-    pointer-events: none;
+/* ─── Header Nav ─── */
+.header-nav h3 {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin: 0 0 14px;
 }
 
-/* Sidebar and Folder View Styles */
-.main-layout {
+.nav-container {
     display: flex;
-    gap: 30px;
-    align-items: flex-start;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--pink) rgba(0, 0, 0, 0.05);
 }
 
-.sidebar {
-    width: 300px;
-    flex-shrink: 0;
+.nav-container::-webkit-scrollbar {
+    height: 4px;
 }
 
-.content-area {
-    flex-grow: 1;
-    min-width: 0;
+.nav-container::-webkit-scrollbar-thumb {
+    background: var(--pink);
+    border-radius: 4px;
 }
 
-.folder-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
+/* Folder pills — each one a different Holi color */
 .folder-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    background: rgba(255, 255, 255, 0.03);
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 50px;
+    background: rgba(0, 0, 0, 0.03);
+    border: 2px solid transparent;
     cursor: pointer;
-    transition: background 0.2s;
-    border: 1px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+/* Pill colors — soft tints like powder dusted on surface */
+.folder-item:nth-child(6n+1) {
+    border-color: rgba(233, 30, 140, 0.4);
+    background: rgba(233, 30, 140, 0.06);
+}
+
+.folder-item:nth-child(6n+2) {
+    border-color: rgba(245, 101, 0, 0.4);
+    background: rgba(245, 101, 0, 0.06);
+}
+
+.folder-item:nth-child(6n+3) {
+    border-color: rgba(232, 168, 0, 0.4);
+    background: rgba(232, 168, 0, 0.06);
+}
+
+.folder-item:nth-child(6n+4) {
+    border-color: rgba(21, 168, 50, 0.4);
+    background: rgba(21, 168, 50, 0.06);
+}
+
+.folder-item:nth-child(6n+5) {
+    border-color: rgba(0, 153, 204, 0.4);
+    background: rgba(0, 153, 204, 0.06);
+}
+
+.folder-item:nth-child(6n+6) {
+    border-color: rgba(123, 44, 191, 0.4);
+    background: rgba(123, 44, 191, 0.06);
 }
 
 .folder-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    filter: brightness(0.95);
 }
 
-.folder-item.active {
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid var(--primary);
+/* Active pill — full solid color border + light tint */
+.folder-item.active:nth-child(6n+1) {
+    border-color: var(--pink);
+    background: rgba(233, 30, 140, 0.12);
+    box-shadow: 0 4px 12px rgba(233, 30, 140, 0.25);
+}
+
+.folder-item.active:nth-child(6n+2) {
+    border-color: var(--orange);
+    background: rgba(245, 101, 0, 0.12);
+    box-shadow: 0 4px 12px rgba(245, 101, 0, 0.25);
+}
+
+.folder-item.active:nth-child(6n+3) {
+    border-color: var(--yellow);
+    background: rgba(232, 168, 0, 0.12);
+    box-shadow: 0 4px 12px rgba(232, 168, 0, 0.25);
+}
+
+.folder-item.active:nth-child(6n+4) {
+    border-color: var(--green);
+    background: rgba(21, 168, 50, 0.12);
+    box-shadow: 0 4px 12px rgba(21, 168, 50, 0.25);
+}
+
+.folder-item.active:nth-child(6n+5) {
+    border-color: var(--cyan);
+    background: rgba(0, 153, 204, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 153, 204, 0.25);
+}
+
+.folder-item.active:nth-child(6n+6) {
+    border-color: var(--purple);
+    background: rgba(123, 44, 191, 0.12);
+    box-shadow: 0 4px 12px rgba(123, 44, 191, 0.25);
 }
 
 .folder-info {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
 }
 
 .folder-name {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.9rem;
-    color: var(--text-main);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--text);
 }
 
 .folder-date {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.folder-actions {
-    display: flex;
-    gap: 8px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 2px;
 }
 
 .btn-delete {
     background: transparent;
     border: none;
-    color: var(--text-muted);
-    padding: 4px;
+    color: var(--muted);
+    padding: 4px 6px;
     cursor: pointer;
-    border-radius: 4px;
-    transition: color 0.2s, background 0.2s;
+    border-radius: 50%;
     width: auto;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: none;
+    transition: color 0.2s, background 0.2s;
+}
+
+.btn-delete::after {
+    display: none;
 }
 
 .btn-delete:hover {
-    color: var(--danger);
-    background: rgba(239, 68, 68, 0.1);
+    color: var(--red);
+    background: rgba(214, 40, 40, 0.1);
+    transform: none;
+    box-shadow: none;
+    filter: none;
 }
 
+/* ─── Main layout ─── */
+.main-layout {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.content-area {
+    width: 100%;
+}
+
+/* ─── Results Table ─── */
+.results-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 12px;
+    margin-top: -12px;
+}
+
+.results-table th {
+    text-align: left;
+    padding: 10px 20px;
+    color: var(--muted);
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+}
+
+/* Each row gets a different soft Holi tint — like colored powder on paper */
+.results-table tbody tr:nth-child(6n+1) td {
+    background: rgba(233, 30, 140, 0.04);
+}
+
+.results-table tbody tr:nth-child(6n+2) td {
+    background: rgba(245, 101, 0, 0.05);
+}
+
+.results-table tbody tr:nth-child(6n+3) td {
+    background: rgba(232, 168, 0, 0.05);
+}
+
+.results-table tbody tr:nth-child(6n+4) td {
+    background: rgba(21, 168, 50, 0.05);
+}
+
+.results-table tbody tr:nth-child(6n+5) td {
+    background: rgba(0, 153, 204, 0.05);
+}
+
+.results-table tbody tr:nth-child(6n+6) td {
+    background: rgba(123, 44, 191, 0.05);
+}
+
+/* Left stroke accent — the "brush" of that color */
+.results-table tbody tr:nth-child(6n+1) td:first-child {
+    border-left: 5px solid var(--pink);
+}
+
+.results-table tbody tr:nth-child(6n+2) td:first-child {
+    border-left: 5px solid var(--orange);
+}
+
+.results-table tbody tr:nth-child(6n+3) td:first-child {
+    border-left: 5px solid var(--yellow);
+}
+
+.results-table tbody tr:nth-child(6n+4) td:first-child {
+    border-left: 5px solid var(--green);
+}
+
+.results-table tbody tr:nth-child(6n+5) td:first-child {
+    border-left: 5px solid var(--cyan);
+}
+
+.results-table tbody tr:nth-child(6n+6) td:first-child {
+    border-left: 5px solid var(--purple);
+}
+
+.results-table td {
+    padding: 26px 20px;
+    vertical-align: top;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.results-table td:first-child {
+    border-radius: 16px 0 0 16px;
+}
+
+.results-table td:last-child {
+    border-radius: 0 16px 16px 0;
+    border-right: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Filename — each row filename is that row's color */
+.results-table tbody tr:nth-child(6n+1) .filename {
+    color: var(--pink);
+}
+
+.results-table tbody tr:nth-child(6n+2) .filename {
+    color: var(--orange);
+}
+
+.results-table tbody tr:nth-child(6n+3) .filename {
+    color: var(--yellow);
+    filter: brightness(0.8);
+}
+
+.results-table tbody tr:nth-child(6n+4) .filename {
+    color: var(--green);
+}
+
+.results-table tbody tr:nth-child(6n+5) .filename {
+    color: var(--cyan);
+    filter: brightness(0.8);
+}
+
+.results-table tbody tr:nth-child(6n+6) .filename {
+    color: var(--purple);
+}
+
+.filename {
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+/* ─── Summary Text ─── */
+.summary-text {
+    line-height: 1.85;
+    color: #39304a;
+    font-size: 0.98rem;
+}
+
+.summary-text p {
+    margin: 0 0 10px;
+}
+
+.summary-text p:last-child {
+    margin: 0;
+}
+
+.summary-text ul,
+.summary-text ol {
+    padding-left: 20px;
+    margin: 0 0 10px;
+}
+
+.summary-text li {
+    margin-bottom: 5px;
+}
+
+.summary-text h3 {
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 18px 0 6px;
+    color: var(--pink);
+}
+
+.summary-text strong {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.summary-text code {
+    background: rgba(0, 153, 204, 0.1);
+    color: var(--cyan);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.88em;
+    font-family: 'JetBrains Mono', monospace;
+    filter: brightness(0.8);
+}
+
+/* ─── Evaluation Badge ─── */
+.eval-badge {
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.eval-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+}
+
+.score-high {
+    background: rgba(21, 168, 50, 0.06) !important;
+    border-color: rgba(21, 168, 50, 0.2) !important;
+}
+
+.score-med {
+    background: rgba(232, 168, 0, 0.06) !important;
+    border-color: rgba(232, 168, 0, 0.2) !important;
+}
+
+.score-low {
+    background: rgba(214, 40, 40, 0.06) !important;
+    border-color: rgba(214, 40, 40, 0.2) !important;
+}
+
+.score-main-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.score-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 800;
+    color: var(--muted);
+}
+
+.score-main {
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.score-high .score-main {
+    color: var(--green);
+}
+
+.score-med .score-main {
+    color: var(--orange);
+}
+
+.score-low .score-main {
+    color: var(--red);
+}
+
+.score-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.score-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.score-val {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.score-high .score-val {
+    color: var(--green);
+}
+
+.score-med .score-val {
+    color: var(--orange);
+}
+
+.score-low .score-val {
+    color: var(--red);
+}
+
+.score-reason {
+    font-size: 0.84rem;
+    color: var(--muted);
+    line-height: 1.6;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.07);
+    font-style: italic;
+    white-space: normal;
+    overflow: visible;
+    max-width: none;
+}
+
+.eval-na {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* ─── Actions ─── */
+.actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ─── Responsive ─── */
 @media (max-width: 900px) {
-    .main-layout {
-        flex-direction: column;
+    h1 {
+        font-size: 2.8rem;
     }
 
-    .sidebar {
-        width: 100%;
+    .container {
+        margin-top: 18px;
     }
 }

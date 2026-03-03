@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, BackgroundTasks
+from fastapi import FastAPI, Request, Form, BackgroundTasks, Query
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -66,12 +66,16 @@ async def background_summarize(folder_id: str):
             # Extract
             content = extract_content(temp_path)
             
-            # Summarize
-            summary = await summarize_text(content)
+            # Summarize (with evaluation)
+            sh_result = await summarize_text(content)
+            
+            summary = sh_result.get("summary", "Error generating summary.")
+            evaluation = sh_result.get("evaluation")
             
             process_results.append({
                 "filename": file_name,
-                "summary": summary
+                "summary": summary,
+                "evaluation": evaluation
             })
             
             # Clean up temp file
@@ -124,9 +128,18 @@ async def remove_folder(folder_id: str):
     return {"message": "Folder deleted"}
 
 @app.get("/export/{format}")
-async def export_report(format: str):
-    if not process_results:
-        return {"error": "No results to export."}
+async def export_report(format: str, folder_id: str = Query(default=None)):
+    # Determine which results to export
+    results = process_results
+
+    # If in-memory is empty, try folder_id from DB
+    if not results and folder_id:
+        data = await get_folder_results(folder_id)
+        if data:
+            results = data.get("results", [])
+
+    if not results:
+        return {"error": "No results to export. Please open or process a folder first."}
     
     output_dir = "exports"
     if not os.path.exists(output_dir):
@@ -134,15 +147,15 @@ async def export_report(format: str):
         
     if format == "csv":
         file_path = os.path.join(output_dir, "summary_report.csv")
-        generate_csv_report(process_results, file_path)
+        generate_csv_report(results, file_path)
         return FileResponse(file_path, media_type='text/csv', filename="summary_report.csv")
     
     elif format == "pdf":
         file_path = os.path.join(output_dir, "summary_report.pdf")
-        generate_pdf_report(process_results, file_path)
+        generate_pdf_report(results, file_path)
         return FileResponse(file_path, media_type='application/pdf', filename="summary_report.pdf")
     
-    return {"error": "Invalid format."}
+    return {"error": "Invalid format. Use 'csv' or 'pdf'."}
 
 if __name__ == "__main__":
     import uvicorn

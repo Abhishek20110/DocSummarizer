@@ -8,7 +8,10 @@
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
@@ -24,38 +27,30 @@
         </div>
         {% endif %}
 
-        <div class="main-layout">
-            <!-- Sidebar for processed folders -->
-            <div class="sidebar">
-                <div class="card" style="padding: 20px;">
-                    <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1rem;">Processed Folders</h3>
-                    <div id="folder-list-container">
-                        <ul class="folder-list" id="folder-list">
-                            {% for folder in processed_folders %}
-                            <li class="folder-item" data-id="{{ folder.folder_id }}"
-                                onclick="loadFolder('{{ folder.folder_id }}')">
-                                <div class="folder-info">
-                                    <span class="folder-name">{{ folder.folder_name }}</span>
-                                    <span class="folder-date">{{ folder.updated_at.strftime('%Y-%m-%d %H:%M') if
-                                        folder.updated_at else '' }}</span>
-                                </div>
-                                <div class="folder-actions">
-                                    <button class="btn-delete"
-                                        onclick="event.stopPropagation(); deleteFolder('{{ folder.folder_id }}')">Delete</button>
-                                </div>
-                            </li>
-                            {% endfor %}
-                            {% if not processed_folders %}
-                            <li id="no-folders-msg"
-                                style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 20px;">
-                                No processed folders yet.</li>
-                            {% endif %}
-                        </ul>
+        <div class="header-nav card">
+            <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1rem; color: var(--text-muted);">Recent History
+            </h3>
+            <div class="nav-container" id="folder-list">
+                {% for folder in processed_folders %}
+                <div class="folder-item" data-id="{{ folder.folder_id }}"
+                    onclick="loadFolder('{{ folder.folder_id }}')">
+                    <div class="folder-info">
+                        <span class="folder-name">{{ folder.folder_name }}</span>
+                        <span class="folder-date">{{ folder.updated_at.strftime('%Y-%m-%d') if
+                            folder.updated_at else '' }}</span>
                     </div>
+                    <button class="btn-delete" onclick="event.stopPropagation(); deleteFolder('{{ folder.folder_id }}')"
+                        title="Delete">✕</button>
                 </div>
+                {% endfor %}
+                {% if not processed_folders %}
+                <p id="no-folders-msg" style="color: var(--text-muted); font-size: 0.85rem; padding: 5px;">No processed
+                    folders yet.</p>
+                {% endif %}
             </div>
+        </div>
 
-            <!-- Main Content Area -->
+        <div class="main-layout">
             <div class="content-area">
                 <div class="card">
                     <form id="summarizeForm">
@@ -70,29 +65,30 @@
                     <div id="status-container" style="display: none; margin-top: 20px;">
                         <div class="status-header"
                             style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                            <span id="status-text" style="font-weight: 600; color: var(--accent);">Processing...</span>
-                            <span id="progress-text" style="color: var(--text-muted);">0 / 0 files</span>
+                            <span id="status-text" style="font-weight: 700; color: var(--cyan);">Processing...</span>
+                            <span id="progress-text" style="color: var(--muted);">0 / 0 files</span>
                         </div>
-                        <div class="progress-bg"
-                            style="width: 100%; height: 8px; background: #0f172a; border-radius: 4px; overflow: hidden;">
-                            <div id="progress-bar"
-                                style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;">
-                            </div>
+                        <div class="progress-bg">
+                            <div id="progress-bar" style="width: 0%; height: 100%;"></div>
                         </div>
-                        <p id="current-file" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;"></p>
+                        <p id="current-file" style="font-size: 0.85rem; color: var(--muted); margin-top: 12px;"></p>
                     </div>
                 </div>
 
                 <div id="results-container" style="display: none;">
                     <div class="card">
                         <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h3 id="current-folder-title" style="margin: 0; font-size: 1.2rem;">Results</h3>
-                            <div class="actions" style="margin: 0;">
-                                <a id="export-csv" href="/export/csv"><button class="btn-outline"
-                                        style="padding: 8px 16px; font-size: 0.85rem; width: auto;">CSV</button></a>
-                                <a id="export-pdf" href="/export/pdf"><button class="btn-outline"
-                                        style="padding: 8px 16px; font-size: 0.85rem; width: auto;">PDF</button></a>
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                            <h3 id="current-folder-title" style="margin: 0; font-size: 1.4rem; font-weight: 800;">
+                                Results</h3>
+                            <div class="actions" style="margin: 0; display: flex; gap: 8px;">
+                                <button id="resummarize-btn" class="btn-outline"
+                                    style="padding: 8px 16px; font-size: 0.85rem; width: auto; display: none;"
+                                    onclick="resummarizeCurrentFolder()">Resummarize</button>
+                                <button class="btn-outline" style="padding: 8px 16px; font-size: 0.85rem; width: auto;"
+                                    onclick="exportReport('csv')">CSV</button>
+                                <button class="btn-outline" style="padding: 8px 16px; font-size: 0.85rem; width: auto;"
+                                    onclick="exportReport('pdf')">PDF</button>
                             </div>
                         </div>
 
@@ -100,7 +96,8 @@
                             <thead>
                                 <tr>
                                     <th style="width: 25%;">File Name</th>
-                                    <th>Summary</th>
+                                    <th style="width: 55%;">Summary</th>
+                                    <th style="width: 20%;">Quality Score</th>
                                 </tr>
                             </thead>
                             <tbody id="results-body">
@@ -129,6 +126,14 @@
         let pollInterval;
         let activeFolderId = null;
 
+        function exportReport(format) {
+            let url = `/export/${format}`;
+            if (activeFolderId) {
+                url += `?folder_id=${encodeURIComponent(activeFolderId)}`;
+            }
+            window.location.href = url;
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const folderId = document.getElementById('folder_id').value;
@@ -153,6 +158,7 @@
                 }
 
                 statusContainer.style.display = 'block';
+                document.getElementById('resummarize-btn').style.display = 'none';
                 startPolling();
             } catch (err) {
                 console.error(err);
@@ -193,6 +199,7 @@
                     submitBtn.disabled = false;
                     submitBtn.innerText = 'Summarize Another Folder';
                     updateResultsTable(results);
+                    document.getElementById('resummarize-btn').style.display = 'block';
                     refreshFolderList();
                 }
                 else if (status.status === 'error') {
@@ -226,10 +233,7 @@
                 activeFolderId = folderId;
                 currentFolderTitle.innerText = data.folder_name;
                 updateResultsTable(data.results);
-
-                // Update export links if needed (though backend currently uses session results, 
-                // we might need to update this to handle specific folders in a real app)
-                // For now, let's just show the data.
+                document.getElementById('resummarize-btn').style.display = 'block';
             } catch (err) {
                 console.error('Load error:', err);
             }
@@ -261,29 +265,27 @@
 
                 folderList.innerHTML = '';
                 if (folders.length === 0) {
-                    folderList.innerHTML = '<li id="no-folders-msg" style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 20px;">No processed folders yet.</li>';
+                    folderList.innerHTML = '<p id="no-folders-msg" style="color: var(--text-muted); font-size: 0.85rem; padding: 5px;">No processed folders yet.</p>';
                     return;
                 }
 
                 folders.forEach(folder => {
-                    const li = document.createElement('li');
-                    li.className = 'folder-item';
-                    if (folder.folder_id === activeFolderId) li.classList.add('active');
-                    li.dataset.id = folder.folder_id;
-                    li.onclick = () => loadFolder(folder.folder_id);
+                    const div = document.createElement('div');
+                    div.className = 'folder-item';
+                    if (folder.folder_id === activeFolderId) div.classList.add('active');
+                    div.dataset.id = folder.folder_id;
+                    div.onclick = () => loadFolder(folder.folder_id);
 
-                    const dateStr = folder.updated_at ? new Date(folder.updated_at).toLocaleString() : '';
+                    const dateStr = folder.updated_at ? new Date(folder.updated_at).toISOString().split('T')[0] : '';
 
-                    li.innerHTML = `
+                    div.innerHTML = `
                         <div class="folder-info">
                             <span class="folder-name">${folder.folder_name}</span>
                             <span class="folder-date">${dateStr}</span>
                         </div>
-                        <div class="folder-actions">
-                            <button class="btn-delete" onclick="event.stopPropagation(); deleteFolder('${folder.folder_id}')">Delete</button>
-                        </div>
+                        <button class="btn-delete" onclick="event.stopPropagation(); deleteFolder('${folder.folder_id}')" title="Delete">✕</button>
                     `;
-                    folderList.appendChild(li);
+                    folderList.appendChild(div);
                 });
             } catch (err) {
                 console.error('Refresh error:', err);
@@ -295,12 +297,88 @@
             resultsBody.innerHTML = '';
             results.forEach(item => {
                 const row = document.createElement('tr');
+                const parsedSummary = marked.parse(item.summary || '');
+
+                let evalHtml = '<span class="eval-na">N/A</span>';
+                if (item.evaluation) {
+                    const e = item.evaluation;
+                    evalHtml = `
+                        <div class="eval-badge ${getScoreClass(e.overall)}">
+                            <div class="score-main-container">
+                                <span class="score-label">Overall Quality</span>
+                                <span class="score-main">${e.overall}/10</span>
+                            </div>
+                            <div class="score-grid">
+                                <div class="score-item">
+                                    <span class="score-label">Coverage</span>
+                                    <span class="score-val">${e.coverage || '?'}/10</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-label">Faithful</span>
+                                    <span class="score-val">${e.faithfulness || '?'}/10</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-label">Clarity</span>
+                                    <span class="score-val">${e.clarity || '?'}/10</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-label">Structure</span>
+                                    <span class="score-val">${e.structure || '?'}/10</span>
+                                </div>
+                            </div>
+                            <div class="score-reason">${e.reason}</div>
+                        </div>
+                    `;
+                }
+
                 row.innerHTML = `
                     <td><span class="filename">${item.filename}</span></td>
-                    <td><div class="summary-text">${item.summary}</div></td>
+                    <td><div class="summary-text">${parsedSummary}</div></td>
+                    <td>${evalHtml}</td>
                 `;
                 resultsBody.appendChild(row);
             });
+        }
+
+        function getScoreClass(score) {
+            if (score >= 8) return 'score-high';
+            if (score >= 6) return 'score-med';
+            return 'score-low';
+        }
+
+        async function resummarizeCurrentFolder() {
+            if (!activeFolderId) return;
+
+            const resummarizeBtn = document.getElementById('resummarize-btn');
+            resummarizeBtn.disabled = true;
+            resummarizeBtn.innerText = 'Initializing...';
+
+            try {
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `folder_id=${encodeURIComponent(activeFolderId)}`
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    resummarizeBtn.disabled = false;
+                    resummarizeBtn.innerText = 'Resummarize';
+                    return;
+                }
+
+                statusContainer.style.display = 'block';
+                resummarizeBtn.style.display = 'none';
+                resummarizeBtn.disabled = false;
+                resummarizeBtn.innerText = 'Resummarize';
+                startPolling();
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred. Check console.');
+                resummarizeBtn.disabled = false;
+                resummarizeBtn.innerText = 'Resummarize';
+            }
         }
     </script>
 </body>
