@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+jinja2
+python-multipart
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+pymupdf
+python-docx
+httpx
+pandas
+fpdf2
+python-dotenv
+openai
+motor
