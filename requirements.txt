@@ -15,3 +15,4 @@ openai
 motor
 pdfplumber
 gunicorn
+fpdf2
