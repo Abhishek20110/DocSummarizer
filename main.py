@@ -81,13 +81,13 @@ async def forbidden_exception_handler(request: Request, exc: HTTPException):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="login.html", context={"request": request})
 
 @app.post("/login")
 async def login_post(request: Request, username: str = Form(...), password: str = Form(...)):
     user = await get_user_by_username(username)
     if not user or not verify_password(password, user["password_hash"]):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password"})
+        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "Invalid username or password"})
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -100,16 +100,16 @@ async def login_post(request: Request, username: str = Form(...), password: str 
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
-    return templates.TemplateResponse("signup.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="signup.html", context={"request": request})
 
 @app.post("/signup")
 async def signup_post(request: Request, username: str = Form(...), password: str = Form(...), confirm_password: str = Form(...)):
     if password != confirm_password:
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Passwords do not match"})
+        return templates.TemplateResponse(request=request, name="signup.html", context={"request": request, "error": "Passwords do not match"})
     
     existing_user = await get_user_by_username(username)
     if existing_user:
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Username already taken"})
+        return templates.TemplateResponse(request=request, name="signup.html", context={"request": request, "error": "Username already taken"})
     
     hashed_password = get_password_hash(password)
     await create_user(username, hashed_password)
@@ -127,7 +127,7 @@ async def logout():
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, user: dict = Depends(get_current_user_optional)):
     if not user or not user.get("is_active", True):
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse(request=request, name="index.html", context={
             "request": request,
             "results": SAMPLE_RESULTS,
             "process_status": {"status": "idle", "message": "View Only Mode - Login as active user to summarize"},
@@ -140,7 +140,7 @@ async def read_root(request: Request, user: dict = Depends(get_current_user_opti
     folders = await list_processed_folders(username)
     ustatus = get_user_status(username)
     uresults = get_user_results(username)
-    return templates.TemplateResponse("index.html", {
+    return templates.TemplateResponse(request=request, name="index.html", context={
         "request": request, 
         "results": uresults,
         "process_status": ustatus,
