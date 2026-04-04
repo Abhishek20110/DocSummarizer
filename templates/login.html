@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DocSummarizer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+            margin-top: 50px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .auth-links {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .auth-links a {
+            color: var(--cyan);
+            text-decoration: none;
+        }
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header class="text-center">
+            <h1>DocSummarizer</h1>
+            <p class="subtitle">Log in to your account</p>
+        </header>
+
+        <div class="auth-container">
+            {% if error %}
+            <div class="alert alert-error" style="margin-bottom: 20px;">
+                <strong>Error:</strong> {{ error }}
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <form action="/login" method="POST">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn-process" style="width: 100%;">Sign In</button>
+                </form>
+                <div class="auth-links">
+                    Don't have an account? <a href="/signup">Sign up here</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -16,9 +16,19 @@
 
 <body>
     <div class="container">
-        <header>
-            <h1>DocSummarizer</h1>
-            <p class="subtitle">AI-powered document summaries directly from your Google Drive</p>
+        <header style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h1>DocSummarizer</h1>
+                <p class="subtitle">AI-powered document summaries directly from your Google Drive</p>
+            </div>
+            <div style="text-align: right; background: var(--card-bg); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border);">
+                <span style="font-size: 0.9rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Logged in as <strong style="color: var(--text);">{{ user.username }}</strong></span>
+                {% if can_summarize or user.username != "Guest (View Only)" %}
+                <a href="/logout" class="btn-outline" style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto;">Logout</a>
+                {% else %}
+                <a href="/login" class="btn-outline" style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto; color: var(--cyan); border-color: var(--cyan);">Log In</a>
+                {% endif %}
+            </div>
         </header>
 
         {% if error %}
@@ -57,9 +67,9 @@
                         <div class="form-group">
                             <label for="folder_id">New Google Drive Folder ID</label>
                             <input type="text" id="folder_id" name="folder_id" placeholder="Enter folder ID here..."
-                                required>
+                                required {% if not can_summarize %}disabled{% endif %}>
                         </div>
-                        <button type="submit" class="btn-process" id="submitBtn">Start Summarization</button>
+                        <button type="submit" class="btn-process" id="submitBtn" {% if not can_summarize %}disabled style="opacity: 0.5; cursor: not-allowed;" title="Login with an active account to run summarization"{% endif %}>Start Summarization</button>
                     </form>
 
                     <div id="status-container" style="display: none; margin-top: 20px;">
@@ -83,8 +93,8 @@
                                 Results</h3>
                             <div class="actions" style="margin: 0; display: flex; gap: 8px;">
                                 <button id="resummarize-btn" class="btn-outline"
-                                    style="padding: 8px 16px; font-size: 0.85rem; width: auto; display: none;"
-                                    onclick="resummarizeCurrentFolder()">Resummarize</button>
+                                    style="padding: 8px 16px; font-size: 0.85rem; width: auto; display: none; {% if not can_summarize %}opacity: 0.5; cursor: not-allowed;{% endif %}"
+                                    onclick="resummarizeCurrentFolder()" {% if not can_summarize %}disabled title="Login with an active account to run summarization"{% endif %}>Resummarize</button>
                                 <button class="btn-outline" style="padding: 8px 16px; font-size: 0.85rem; width: auto;"
                                     onclick="exportReport('csv')">CSV</button>
                                 <button class="btn-outline" style="padding: 8px 16px; font-size: 0.85rem; width: auto;"

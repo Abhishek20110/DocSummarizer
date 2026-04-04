@@ -1,21 +1,24 @@
-from fastapi import FastAPI, Request, Form, BackgroundTasks, Query
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, Request, Form, BackgroundTasks, Query, Depends, HTTPException, status
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from datetime import timedelta
 import os
 import shutil
 import logging
 from dotenv import load_dotenv
 
-#if using oauth, import from authwithOAuth  instead of auth
-#from services.authwithOAuth import get_drive_service 
-from services.auth import get_drive_service # Updated to use the new auth module
+from services.auth import get_drive_service
 from services.drive_service import list_files_in_folder, download_file_to_memory, get_folder_name
-from services.extractor import extract_content , extract_content_from_stream
+from services.extractor import extract_content, extract_content_from_stream
 from services.summarizer import summarize_text
 from services.report_gen import generate_csv_report, generate_pdf_report
-from services.database import save_folder_results, get_folder_results, list_processed_folders, delete_folder, client as mongo_client
+from services.database import (save_folder_results, get_folder_results, list_processed_folders, delete_folder, 
+                                client as mongo_client, create_user, get_user_by_username)
+from services.user_auth import (get_current_user, get_current_active_user, get_current_user_optional, create_access_token, verify_password, 
+                                get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES)
+from services.sample_data import SAMPLE_FOLDER, SAMPLE_RESULTS
 
 load_dotenv()
 
@@ -23,14 +26,12 @@ logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: verify MongoDB connection
     try:
         await mongo_client.server_info()
         logger.info("✅ MongoDB connected successfully.")
     except Exception as e:
         logger.error(f"❌ MongoDB connection failed: {e}")
     yield
-    # Shutdown: close MongoDB connection gracefully
     mongo_client.close()
     logger.info("🔌 MongoDB connection closed.")
 
@@ -38,30 +39,121 @@ app = FastAPI(title="DocSummarizer", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Status tracking
-process_status = {
-    "status": "idle", # idle, processing, completed, error
-    "message": "",
-    "current_file": "",
-    "total_files": 0,
-    "processed_count": 0
-}
-process_results = []
+# Status tracking explicitly separated by username
+user_process_status = {}
+user_process_results = {}
+
+def get_user_status(username: str):
+    if username not in user_process_status:
+        user_process_status[username] = {
+            "status": "idle",
+            "message": "",
+            "current_file": "",
+            "total_files": 0,
+            "processed_count": 0
+        }
+    return user_process_status[username]
+
+def get_user_results(username: str):
+    if username not in user_process_results:
+        user_process_results[username] = []
+    return user_process_results[username]
+
+@app.exception_handler(status.HTTP_401_UNAUTHORIZED)
+async def unauthorized_exception_handler(request: Request, exc: HTTPException):
+    if request.url.path.startswith("/api") or request.url.path in ["/summarize", "/status"]:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"error": exc.detail},
+        )
+    return RedirectResponse(url="/login")
+
+@app.exception_handler(status.HTTP_403_FORBIDDEN)
+async def forbidden_exception_handler(request: Request, exc: HTTPException):
+    if request.url.path.startswith("/api") or request.url.path in ["/summarize", "/status"]:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"error": exc.detail},
+        )
+    return RedirectResponse(url="/login")
+
+# --- AUTH ROUTES ---
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.post("/login")
+async def login_post(request: Request, username: str = Form(...), password: str = Form(...)):
+    user = await get_user_by_username(username)
+    if not user or not verify_password(password, user["password_hash"]):
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password"})
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": username}, expires_delta=access_token_expires
+    )
+    
+    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    return response
+
+@app.get("/signup", response_class=HTMLResponse)
+async def signup_page(request: Request):
+    return templates.TemplateResponse("signup.html", {"request": request})
+
+@app.post("/signup")
+async def signup_post(request: Request, username: str = Form(...), password: str = Form(...), confirm_password: str = Form(...)):
+    if password != confirm_password:
+        return templates.TemplateResponse("signup.html", {"request": request, "error": "Passwords do not match"})
+    
+    existing_user = await get_user_by_username(username)
+    if existing_user:
+        return templates.TemplateResponse("signup.html", {"request": request, "error": "Username already taken"})
+    
+    hashed_password = get_password_hash(password)
+    await create_user(username, hashed_password)
+    
+    return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
+@app.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    response.delete_cookie("access_token")
+    return response
+
+# --- APP ROUTES ---
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    folders = await list_processed_folders()
+async def read_root(request: Request, user: dict = Depends(get_current_user_optional)):
+    if not user or not user.get("is_active", True):
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "results": SAMPLE_RESULTS,
+            "process_status": {"status": "idle", "message": "View Only Mode - Login as active user to summarize"},
+            "processed_folders": [SAMPLE_FOLDER],
+            "user": user or {"username": "Guest (View Only)"},
+            "can_summarize": False
+        })
+        
+    username = user["username"]
+    folders = await list_processed_folders(username)
+    ustatus = get_user_status(username)
+    uresults = get_user_results(username)
     return templates.TemplateResponse("index.html", {
         "request": request, 
-        "results": process_results,
-        "process_status": process_status,
-        "processed_folders": folders
+        "results": uresults,
+        "process_status": ustatus,
+        "processed_folders": folders,
+        "user": user,
+        "can_summarize": True
     })
 
-async def background_summarize(folder_id: str):
-    global process_results, process_status
+async def background_summarize(folder_id: str, username: str):
+    ustatus = get_user_status(username)
+    uresults = get_user_results(username)
 
-    process_status.update({
+    ustatus.update({
         "status": "processing",
         "processed_count": 0,
         "total_files": 0,
@@ -69,16 +161,16 @@ async def background_summarize(folder_id: str):
         "message": ""
     })
 
-    process_results = []
+    uresults.clear()
 
     try:
         service = get_drive_service()
         files = list_files_in_folder(service, folder_id)
 
-        process_status["total_files"] = len(files)
+        ustatus["total_files"] = len(files)
 
         if not files:
-            process_status.update({
+            ustatus.update({
                 "status": "completed",
                 "message": "No supported files found in the folder."
             })
@@ -89,7 +181,7 @@ async def background_summarize(folder_id: str):
             file_name = file["name"]
             mime_type = file["mimeType"]
 
-            process_status["current_file"] = file_name
+            ustatus["current_file"] = file_name
 
             try:
                 # 🔹 Download to memory (auto-skips >10MB)
@@ -97,24 +189,24 @@ async def background_summarize(folder_id: str):
 
                 if file_stream is None:
                     # Skipped due to size or error
-                    process_results.append({
+                    uresults.append({
                         "filename": file_name,
                         "summary": "Skipped (file too large or download failed).",
                         "evaluation": None
                     })
-                    process_status["processed_count"] += 1
+                    ustatus["processed_count"] += 1
                     continue
 
                 # 🔹 Extract content (in-memory)
                 content = extract_content_from_stream(file_stream, mime_type)
 
                 if not content.strip():
-                    process_results.append({
+                    uresults.append({
                         "filename": file_name,
                         "summary": "No readable content found.",
                         "evaluation": None
                     })
-                    process_status["processed_count"] += 1
+                    ustatus["processed_count"] += 1
                     continue
 
                 # 🔹 Summarize
@@ -123,46 +215,53 @@ async def background_summarize(folder_id: str):
                 summary = sh_result.get("summary", "Error generating summary.")
                 evaluation = sh_result.get("evaluation")
 
-                process_results.append({
+                uresults.append({
                     "filename": file_name,
                     "summary": summary,
                     "evaluation": evaluation
                 })
 
             except Exception as file_error:
-                process_results.append({
+                uresults.append({
                     "filename": file_name,
                     "summary": f"Processing failed: {str(file_error)}",
                     "evaluation": None
                 })
 
-            process_status["processed_count"] += 1
+            ustatus["processed_count"] += 1
 
-        process_status.update({
+        ustatus.update({
             "status": "completed",
-            "message": f"Successfully processed {process_status['processed_count']} documents.",
+            "message": f"Successfully processed {ustatus['processed_count']} documents.",
             "current_file": ""
         })
 
         # 🔹 Persist results
         folder_name = get_folder_name(service, folder_id)
-        await save_folder_results(folder_id, folder_name, process_results)
+        await save_folder_results(folder_id, folder_name, list(uresults), username)
 
     except Exception as e:
-        process_status.update({
+        ustatus.update({
             "status": "error",
             "message": str(e)
         })
+
 @app.post("/summarize")
-async def process_folder(background_tasks: BackgroundTasks, folder_id: str = Form(...)):
-    if process_status["status"] == "processing":
+async def process_folder(background_tasks: BackgroundTasks, folder_id: str = Form(...), user: dict = Depends(get_current_active_user)):
+    username = user["username"]
+    ustatus = get_user_status(username)
+    if ustatus["status"] == "processing":
         return {"error": "A folder is already being processed."}
     
-    background_tasks.add_task(background_summarize, folder_id)
+    background_tasks.add_task(background_summarize, folder_id, username)
     return {"message": "Processing started in the background.", "folder_id": folder_id}
 
 @app.get("/status")
-async def get_status():
+async def get_status(user: dict = Depends(get_current_user)):
+    username = user["username"]
+    ustatus = get_user_status(username)
+    uresults = get_user_results(username)
+    
     # Check MongoDB connection
     try:
         await mongo_client.server_info()
@@ -171,37 +270,45 @@ async def get_status():
         mongo_status = f"disconnected ({str(e)})"
 
     return {
-        "process_status": process_status,
-        "results": process_results,
+        "process_status": ustatus,
+        "results": uresults,
         "mongodb": {
             "status": mongo_status
         }
     }
 
 @app.get("/api/folders")
-async def get_folders():
-    return await list_processed_folders()
+async def get_folders(user: dict = Depends(get_current_user)):
+    username = user["username"]
+    return await list_processed_folders(username)
 
 @app.get("/api/folders/{folder_id}")
-async def get_folder(folder_id: str):
-    data = await get_folder_results(folder_id)
+async def get_folder(folder_id: str, user: dict = Depends(get_current_user_optional)):
+    if folder_id == SAMPLE_FOLDER["folder_id"] and (not user or not user.get("is_active", True)):
+        return {"folder_name": SAMPLE_FOLDER["folder_name"], "results": SAMPLE_RESULTS}
+    if not user:
+        return {"error": "Not authenticated"}
+
+    username = user["username"]
+    data = await get_folder_results(folder_id, username)
     if not data:
         return {"error": "Folder not found"}
     return data
 
 @app.delete("/api/folders/{folder_id}")
-async def remove_folder(folder_id: str):
-    await delete_folder(folder_id)
+async def remove_folder(folder_id: str, user: dict = Depends(get_current_user)):
+    username = user["username"]
+    await delete_folder(folder_id, username)
     return {"message": "Folder deleted"}
 
 @app.get("/export/{format}")
-async def export_report(format: str, folder_id: str = Query(default=None)):
-    # Determine which results to export
-    results = process_results
+async def export_report(format: str, folder_id: str = Query(default=None), user: dict = Depends(get_current_user)):
+    username = user["username"]
+    results = get_user_results(username)
 
     # If in-memory is empty, try folder_id from DB
     if not results and folder_id:
-        data = await get_folder_results(folder_id)
+        data = await get_folder_results(folder_id, username)
         if data:
             results = data.get("results", [])
 
@@ -213,14 +320,14 @@ async def export_report(format: str, folder_id: str = Query(default=None)):
         os.makedirs(output_dir)
         
     if format == "csv":
-        file_path = os.path.join(output_dir, "summary_report.csv")
+        file_path = os.path.join(output_dir, f"summary_report_{username}.csv")
         generate_csv_report(results, file_path)
-        return FileResponse(file_path, media_type='text/csv', filename="summary_report.csv")
+        return FileResponse(file_path, media_type='text/csv', filename=f"summary_report_{username}.csv")
     
     elif format == "pdf":
-        file_path = os.path.join(output_dir, "summary_report.pdf")
+        file_path = os.path.join(output_dir, f"summary_report_{username}.pdf")
         generate_pdf_report(results, file_path)
-        return FileResponse(file_path, media_type='application/pdf', filename="summary_report.pdf")
+        return FileResponse(file_path, media_type='application/pdf', filename=f"summary_report_{username}.pdf")
     
     return {"error": "Invalid format. Use 'csv' or 'pdf'."}
 

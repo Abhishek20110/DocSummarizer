@@ -15,4 +15,5 @@ openai
 motor
 pdfplumber
 gunicorn
-fpdf2
+PyJWT
+passlib[bcrypt]
