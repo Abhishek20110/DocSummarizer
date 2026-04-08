@@ -21,12 +21,17 @@
                 <h1>DocSummarizer</h1>
                 <p class="subtitle">AI-powered document summaries directly from your Google Drive</p>
             </div>
-            <div style="text-align: right; background: var(--card-bg); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border);">
-                <span style="font-size: 0.9rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Logged in as <strong style="color: var(--text);">{{ user.username }}</strong></span>
+            <div
+                style="text-align: right; background: var(--card-bg); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border);">
+                <span style="font-size: 0.9rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Logged in
+                    as <strong style="color: var(--text);">{{ user.username }}</strong></span>
                 {% if can_summarize or user.username != "Guest (View Only)" %}
-                <a href="/logout" class="btn-outline" style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto;">Logout</a>
+                <a href="/logout" class="btn-outline"
+                    style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto;">Logout</a>
                 {% else %}
-                <a href="/login" class="btn-outline" style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto; color: var(--cyan); border-color: var(--cyan);">Log In</a>
+                <a href="/login" class="btn-outline"
+                    style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none; display: inline-block; width: auto; color: var(--cyan); border-color: var(--cyan);">Log
+                    In</a>
                 {% endif %}
             </div>
         </header>
@@ -68,8 +73,29 @@
                             <label for="folder_id">New Google Drive Folder ID</label>
                             <input type="text" id="folder_id" name="folder_id" placeholder="Enter folder ID here..."
                                 required {% if not can_summarize %}disabled{% endif %}>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">
+                                <strong>Note:</strong> You must make the folder public (Anyone with the link) OR share
+                                it explicitly with:<br>
+                                <span style="display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;">
+                                    <code id="service-email"
+                                        style="display: inline-block; background: var(--bg-color); padding: 4px 6px; border-radius: 4px; color: var(--cyan); font-size: 0.8rem; user-select: all;">drive-backend-service@intrepid-snow-436313-i4.iam.gserviceaccount.com</code>
+
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                        onclick="copyServiceEmail(this)" title="Copy email" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        style="cursor: pointer; color: var(--text-muted); opacity: 0.6; transition: opacity 0.2s, color 0.2s; flex-shrink: 0;">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+
+                                </span>
+                            </p>
                         </div>
-                        <button type="submit" class="btn-process" id="submitBtn" {% if not can_summarize %}disabled style="opacity: 0.5; cursor: not-allowed;" title="Login with an active account to run summarization"{% endif %}>Start Summarization</button>
+                        <button type="submit" class="btn-process" id="submitBtn" {% if not can_summarize %}disabled
+                            style="opacity: 0.5; cursor: not-allowed;"
+                            title="Login with an active account to run summarization" {% endif %}>Start
+                            Summarization</button>
                     </form>
 
                     <div id="status-container" style="display: none; margin-top: 20px;">
@@ -94,7 +120,9 @@
                             <div class="actions" style="margin: 0; display: flex; gap: 8px;">
                                 <button id="resummarize-btn" class="btn-outline"
                                     style="padding: 8px 16px; font-size: 0.85rem; width: auto; display: none; {% if not can_summarize %}opacity: 0.5; cursor: not-allowed;{% endif %}"
-                                    onclick="resummarizeCurrentFolder()" {% if not can_summarize %}disabled title="Login with an active account to run summarization"{% endif %}>Resummarize</button>
+                                    onclick="resummarizeCurrentFolder()" {% if not can_summarize %}disabled
+                                    title="Login with an active account to run summarization" {% endif
+                                    %}>Resummarize</button>
                                 <button class="btn-outline" style="padding: 8px 16px; font-size: 0.85rem; width: auto;"
                                     onclick="exportReport('csv')">CSV</button>
                                 <button class="btn-outline" style="padding: 8px 16px; font-size: 0.85rem; width: auto;"
@@ -134,7 +162,8 @@
         const currentFolderTitle = document.getElementById('current-folder-title');
 
         let pollInterval;
-        let activeFolderId = null;
+        // Pre-set for guest/view-only users so CSV/PDF export works on sample folder
+        let activeFolderId = {% if not can_summarize %}"{{ processed_folders[0].folder_id if processed_folders else '' }}"{% else %}null{% endif %};
 
         function exportReport(format) {
             let url = `/export/${format}`;
@@ -389,6 +418,30 @@
                 resummarizeBtn.disabled = false;
                 resummarizeBtn.innerText = 'Resummarize';
             }
+        }
+
+        const CLIPBOARD_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+        const CHECK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+        function copyServiceEmail(svgEl) {
+            const email = document.getElementById('service-email').innerText;
+            navigator.clipboard.writeText(email).then(() => {
+                // Swap to checkmark
+                svgEl.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
+                svgEl.setAttribute('stroke-width', '2.5');
+                svgEl.style.color = 'var(--cyan)';
+                svgEl.style.stroke = 'var(--cyan)';
+                svgEl.style.opacity = '1';
+                setTimeout(() => {
+                    svgEl.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
+                    svgEl.setAttribute('stroke-width', '2');
+                    svgEl.style.color = 'var(--text-muted)';
+                    svgEl.style.stroke = '';
+                    svgEl.style.opacity = '0.6';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
         }
     </script>
 </body>

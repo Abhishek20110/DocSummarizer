@@ -1,6 +1,9 @@
 from openai import AsyncOpenAI
 import os
 from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -148,15 +151,17 @@ async def evaluate_summary(client: AsyncOpenAI, original_text: str, summary: str
         import json
         return json.loads(response.choices[0].message.content)
     except Exception as e:
-        print(f"Evaluation error: {e}")
+        logger.error(f"Evaluation error: {e}", exc_info=True)
         return None
 
 async def summarize_text(text: str):
     """Summarizes text and evaluates it using LLM-as-a-Judge."""
     if not OPENROUTER_API_KEY:
+        logger.error("OpenRouter API key not found.")
         return {"error": "OpenRouter API key not found."}
 
     if not text or len(text.strip()) == 0:
+        logger.warning("No content to summarize.")
         return {"error": "No content to summarize."}
 
     # Limit text length to avoid token limits (basic truncation)
@@ -170,6 +175,7 @@ async def summarize_text(text: str):
     )
 
     try:
+        logger.info(f"Starting summarization task for {len(truncated_text)} characters.")
         # Step 1: Generate Summary
         response = await client.chat.completions.create(
                     model="openai/gpt-oss-120b",
@@ -201,11 +207,15 @@ async def summarize_text(text: str):
         summary = response.choices[0].message.content.strip()
 
         # Step 2: Evaluate Summary (LLM-as-a-Judge)
+        logger.info("Evaluating summary quality...")
         evaluation = await evaluate_summary(client, truncated_text, summary)
+        
+        logger.info("Summarization and evaluation complete.")
 
         return {
             "summary": summary,
             "evaluation": evaluation
         }
     except Exception as e:
+        logger.error(f"Error during summarization: {str(e)}", exc_info=True)
         return {"error": f"Error during summarization: {str(e)}"}

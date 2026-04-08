@@ -16,4 +16,4 @@ motor
 pdfplumber
 gunicorn
 PyJWT
-passlib[bcrypt]
+bcrypt

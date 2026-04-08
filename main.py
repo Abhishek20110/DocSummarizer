@@ -85,8 +85,10 @@ async def login_page(request: Request):
 
 @app.post("/login")
 async def login_post(request: Request, username: str = Form(...), password: str = Form(...)):
+    logger.info(f"Login attempt for user: {username}")
     user = await get_user_by_username(username)
     if not user or not verify_password(password, user["password_hash"]):
+        logger.warning(f"Failed login attempt for user: {username}")
         return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": "Invalid username or password"})
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -94,6 +96,7 @@ async def login_post(request: Request, username: str = Form(...), password: str 
         data={"sub": username}, expires_delta=access_token_expires
     )
     
+    logger.info(f"User logged in successfully: {username}")
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     return response
@@ -104,20 +107,27 @@ async def signup_page(request: Request):
 
 @app.post("/signup")
 async def signup_post(request: Request, username: str = Form(...), password: str = Form(...), confirm_password: str = Form(...)):
+    logger.info(f"Signup attempt for username: {username}")
     if password != confirm_password:
+        logger.warning(f"Signup failed: Passwords do not match for {username}")
         return templates.TemplateResponse(request=request, name="signup.html", context={"request": request, "error": "Passwords do not match"})
     
     existing_user = await get_user_by_username(username)
     if existing_user:
+        logger.warning(f"Signup failed: Username {username} already taken")
         return templates.TemplateResponse(request=request, name="signup.html", context={"request": request, "error": "Username already taken"})
     
     hashed_password = get_password_hash(password)
     await create_user(username, hashed_password)
+    logger.info(f"User registered successfully: {username}")
     
     return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
 @app.get("/logout")
-async def logout():
+async def logout(request: Request):
+    user_token = request.cookies.get("access_token")
+    if user_token:
+        logger.info("User logged out")
     response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     response.delete_cookie("access_token")
     return response
@@ -150,6 +160,7 @@ async def read_root(request: Request, user: dict = Depends(get_current_user_opti
     })
 
 async def background_summarize(folder_id: str, username: str):
+    logger.info(f"Background summarize started for folder_id: {folder_id} by user: {username}")
     ustatus = get_user_status(username)
     uresults = get_user_results(username)
 
@@ -170,9 +181,10 @@ async def background_summarize(folder_id: str, username: str):
         ustatus["total_files"] = len(files)
 
         if not files:
+            logger.warning(f"No supported files found in folder: {folder_id}. Possibly a permissions issue.")
             ustatus.update({
-                "status": "completed",
-                "message": "No supported files found in the folder."
+                "status": "error",
+                "message": "No files were found in this folder. This usually means the service account doesn't have access. Please make the folder public or share it with: drive-backend-service@intrepid-snow-436313-i4.iam.gserviceaccount.com"
             })
             return
 
@@ -181,6 +193,7 @@ async def background_summarize(folder_id: str, username: str):
             file_name = file["name"]
             mime_type = file["mimeType"]
 
+            logger.info(f"Processing file: {file_name} from folder {folder_id}")
             ustatus["current_file"] = file_name
 
             try:
@@ -222,6 +235,7 @@ async def background_summarize(folder_id: str, username: str):
                 })
 
             except Exception as file_error:
+                logger.error(f"Processing failed for file {file_name}: {file_error}")
                 uresults.append({
                     "filename": file_name,
                     "summary": f"Processing failed: {str(file_error)}",
@@ -235,12 +249,14 @@ async def background_summarize(folder_id: str, username: str):
             "message": f"Successfully processed {ustatus['processed_count']} documents.",
             "current_file": ""
         })
+        logger.info(f"Background processing complete. Successfully processed {ustatus['processed_count']} documents for folder {folder_id}.")
 
         # 🔹 Persist results
         folder_name = get_folder_name(service, folder_id)
         await save_folder_results(folder_id, folder_name, list(uresults), username)
 
     except Exception as e:
+        logger.error(f"Error in background summarization for {folder_id}: {e}", exc_info=True)
         ustatus.update({
             "status": "error",
             "message": str(e)
@@ -249,6 +265,7 @@ async def background_summarize(folder_id: str, username: str):
 @app.post("/summarize")
 async def process_folder(background_tasks: BackgroundTasks, folder_id: str = Form(...), user: dict = Depends(get_current_active_user)):
     username = user["username"]
+    logger.info(f"Summarize requested for folder_id: {folder_id} by user: {username}")
     ustatus = get_user_status(username)
     if ustatus["status"] == "processing":
         return {"error": "A folder is already being processed."}
@@ -302,15 +319,24 @@ async def remove_folder(folder_id: str, user: dict = Depends(get_current_user)):
     return {"message": "Folder deleted"}
 
 @app.get("/export/{format}")
-async def export_report(format: str, folder_id: str = Query(default=None), user: dict = Depends(get_current_user)):
-    username = user["username"]
-    results = get_user_results(username)
+async def export_report(format: str, folder_id: str = Query(default=None), user: dict = Depends(get_current_user_optional)):
+    results = []
 
-    # If in-memory is empty, try folder_id from DB
-    if not results and folder_id:
-        data = await get_folder_results(folder_id, username)
-        if data:
-            results = data.get("results", [])
+    # Allow export for the sample folder without auth
+    if folder_id == SAMPLE_FOLDER["folder_id"]:
+        results = SAMPLE_RESULTS
+        username = "sample"
+    elif user:
+        username = user["username"]
+        results = get_user_results(username)
+
+        # If in-memory is empty, try folder_id from DB
+        if not results and folder_id:
+            data = await get_folder_results(folder_id, username)
+            if data:
+                results = data.get("results", [])
+    else:
+        return JSONResponse(status_code=401, content={"error": "Login required to export your folder results."})
 
     if not results:
         return {"error": "No results to export. Please open or process a folder first."}
