@@ -179,7 +179,8 @@ label {
     letter-spacing: 0.09em;
 }
 
-input[type="text"] {
+input[type="text"],input[type="password"]
+{
     width: 100%;
     padding: 15px 18px;
     background: #fafafa;
@@ -191,11 +192,11 @@ input[type="text"] {
     transition: border-color 0.25s, box-shadow 0.25s;
 }
 
-input[type="text"]::placeholder {
+input[type="text"]::placeholder,input[type="password"]::placeholder {
     color: #b0a0b8;
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus  input[type="password"]:focus {
     outline: none;
     border-color: var(--pink);
     box-shadow: 0 0 0 4px rgba(233, 30, 140, 0.12);
