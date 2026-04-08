@@ -165,11 +165,13 @@
         // Pre-set for guest/view-only users so CSV/PDF export works on sample folder
         let activeFolderId = {% if not can_summarize %}"{{ processed_folders[0].folder_id if processed_folders else '' }}"{% else %}null{% endif %};
 
+        const IS_GUEST = {% if not can_summarize %}true{% else %}false{% endif %};
+
         function exportReport(format) {
-            let url = `/export/${format}`;
-            if (activeFolderId) {
-                url += `?folder_id=${encodeURIComponent(activeFolderId)}`;
-            }
+            // Guests use the public sample export endpoint — no auth needed
+            const url = IS_GUEST
+                ? `/sample/export/${format}`
+                : `/export/${format}${activeFolderId ? '?folder_id=' + encodeURIComponent(activeFolderId) : ''}`;
             window.location.href = url;
         }
 

@@ -318,6 +318,27 @@ async def remove_folder(folder_id: str, user: dict = Depends(get_current_user)):
     await delete_folder(folder_id, username)
     return {"message": "Folder deleted"}
 
+# --- PUBLIC SAMPLE EXPORT (no auth required) ---
+
+@app.get("/sample/export/{format}")
+async def export_sample_report(format: str):
+    """Public endpoint to download sample/demo results as CSV or PDF. No login required."""
+    output_dir = "exports"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    if format == "csv":
+        file_path = os.path.join(output_dir, "summary_report_sample.csv")
+        generate_csv_report(SAMPLE_RESULTS, file_path)
+        return FileResponse(file_path, media_type='text/csv', filename="summary_report_sample.csv")
+
+    elif format == "pdf":
+        file_path = os.path.join(output_dir, "summary_report_sample.pdf")
+        generate_pdf_report(SAMPLE_RESULTS, file_path)
+        return FileResponse(file_path, media_type='application/pdf', filename="summary_report_sample.pdf")
+
+    return JSONResponse(status_code=400, content={"error": "Invalid format. Use 'csv' or 'pdf'."})
+
 @app.get("/export/{format}")
 async def export_report(format: str, folder_id: str = Query(default=None), user: dict = Depends(get_current_user_optional)):
     results = []
